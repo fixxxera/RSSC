@@ -11,9 +11,9 @@ session = requests.session()
 
 # proxies = {'https': 'https://165.138.65.233:3128'}
 # proxies = {'https': 'https://192.241.145.201:8080'}
-proxies = {'https': 'https://104.198.223.14:80'}
-#proxies = {'https': 'https://35.185.23.159:80'}
-proxies = {'https': 'https://207.99.118.74:8080'}
+# proxies = {'https': 'https://104.198.223.14:80'}
+# proxies = {'https': 'https://35.185.23.159:80'}
+proxies = {'https': 'https://35.186.187.230:3128'}
 pool = ThreadPool(4)
 destination_list = ['AFRIND', 'ALSKA', 'ASIAS', 'CANNE', 'CARMX', 'GRNDX', 'EURMD', 'RUSBA', 'LATAM', 'GRNDV']
 to_walk = []
