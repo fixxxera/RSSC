@@ -13,7 +13,7 @@ session = requests.session()
 # proxies = {'https': 'https://192.241.145.201:8080'}
 # proxies = {'https': 'https://104.198.223.14:80'}
 # proxies = {'https': 'https://35.185.23.159:80'}
-proxies = {'https': 'https://35.186.187.230:3128'}
+proxies = {'https': 'https://70.35.197.74:80'}
 pool = ThreadPool(4)
 destination_list = ['AFRIND', 'ALSKA', 'ASIAS', 'CANNE', 'CARMX', 'GRNDX', 'EURMD', 'RUSBA', 'LATAM', 'GRNDV']
 to_walk = []
@@ -183,8 +183,9 @@ def parse(pack):
             sail_date = convert_date(spans[0].text.replace(',', ''))
             return_date = calculate_days(sail_date, number_of_nights)
             interior_bucket_price = ''
-            destination_code = des
-            destination_name = get_from_code(destination_code)
+            destination = get_from_code(des)
+            destination_name = destination[0]
+            destination_code = destination[1]
             cruise_line_name = 'RSSC'
             itinerary_id = ''
             cruise_id = '13'
@@ -193,13 +194,24 @@ def parse(pack):
             url = 'https://www.rssc.com' + price_block
             page = session.get(url=url, headers=headers, proxies=proxies)
             soup = BeautifulSoup(page.text, 'lxml')
+            # getting ports here
+            ports_table = soup.find('div', {'id': 'itineraryInfo'})
+            rows = ports_table.find_all('tr')
+            ports = []
+            for row in rows:
+                tds = row.find_all('td')
+                try:
+                    ports.append(tds[2].text.split(',')[0].replace('Cruising the ', '').replace('Cruising ', '').strip())
+                except IndexError:
+                    pass
+            print(ports)
+            # getting prices here
             table = soup.find('table', {'id': 'right'})
             row_list = []
             prices = []
             siblings = table.find_all('tr')
             for s in siblings:
                 row_list.append(s)
-            print(url)
             for index in range(1, len(row_list), 2):
                 twoforone = row_list[index].find('td', {'class': 'twoforone'}).text
                 room = row_list[index].find('a').text.split(' Suite ')[0]
@@ -230,8 +242,9 @@ def parse(pack):
             temp = [destination_code, destination_name, vessel_id, vessel_name, cruise_id, cruise_line_name,
                     itinerary_id,
                     brochure_name, number_of_nights, sail_date, return_date,
-                    interior_bucket_price, oceanview_bucket_price, balcony_bucket_price, suite_bucket_price]
+                    interior_bucket_price, oceanview_bucket_price, balcony_bucket_price, suite_bucket_price, ports]
             tmp2 = [temp]
+            print(temp)
             result_list.append(tmp2)
     pass
 
@@ -280,6 +293,7 @@ def write_file_to_excell(data_array):
     worksheet.set_column("M:M", 25)
     worksheet.set_column("N:N", 20)
     worksheet.set_column("O:O", 20)
+    worksheet.set_column("P:P", 100)
     worksheet.write('A1', 'DestinationCode', bold)
     worksheet.write('B1', 'DestinationName', bold)
     worksheet.write('C1', 'VesselID', bold)
@@ -295,6 +309,7 @@ def write_file_to_excell(data_array):
     worksheet.write('M1', 'OceanViewBucketPrice', bold)
     worksheet.write('N1', 'BalconyBucketPrice', bold)
     worksheet.write('O1', 'SuiteBucketPrice', bold)
+    worksheet.write('P1', 'Ports', bold)
     row_count = 1
     money_format = workbook.add_format({'bold': True})
     ordinary_number = workbook.add_format({"num_format": '#,##0'})
@@ -403,6 +418,9 @@ def write_file_to_excell(data_array):
                             worksheet.write(row_count, column_count, cell, centered)
                         else:
                             worksheet.write_number(row_count, column_count, number, money_format)
+                        column_count += 1
+                    elif column_count == 15:
+                        worksheet.write_string(row_count, column_count, str(r), centered)
                         column_count += 1
                 except ValueError:
                     worksheet.write_string(row_count, column_count, r, centered)
