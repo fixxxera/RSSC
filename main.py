@@ -3,6 +3,7 @@ import math
 import os
 
 import requests
+import sqlite3
 import xlsxwriter
 from bs4 import BeautifulSoup
 from multiprocessing.dummy import Pool as ThreadPool
@@ -133,6 +134,119 @@ def get_from_vessel_name(vn):
     pass
 
 
+def split_carib_auto(ports, dc, dn):
+    cu = []
+    wc = []
+    ec = []
+    bm = []
+    conn = sqlite3.connect('/home/fixxxer/PycharmProjects/PortsExplorer/ports.db')
+    c = conn.cursor()
+    c.execute("SELECT * FROM portlist WHERE destination_name='Cuba'")
+    for row in c.fetchall():
+        cu.append(row[0])
+    c.execute("SELECT * FROM portlist WHERE destination_name='West Carib'")
+    for row in c.fetchall():
+        wc.append(row[0])
+    c.execute("SELECT * FROM portlist WHERE destination_name='East Carib'")
+    for row in c.fetchall():
+        ec.append(row[0])
+    c.execute("SELECT * FROM portlist WHERE destination_name='Bermuda'")
+    for row in c.fetchall():
+        bm.append(row[0])
+    c.close()
+    conn.close()
+    result = []
+    iscu = False
+    isec = False
+    iswc = False
+    ports_list = []
+    for i in range(len(ports)):
+        if i == 0:
+            pass
+        else:
+            ports_list.append(ports[i])
+    for element in cu:
+        for p in ports_list:
+            if p in element or element in p:
+                iscu = True
+    if not iscu:
+        for element in wc:
+            for p in ports_list:
+                if p in element or element in p:
+                    iswc = True
+    if not iswc:
+        for element in ec:
+            for p in ports_list:
+                if p in element or element in p:
+                    isec = True
+    if iscu:
+        result.append("Cuba")
+        result.append("C")
+        result.append("CU")
+        return result
+    elif iswc:
+        result.append("West Carib")
+        result.append("C")
+        result.append("WC")
+        return result
+    elif isec:
+        result.append("East Carib")
+        result.append("C")
+        result.append("EC")
+        return result
+    else:
+        result.append(dn)
+        result.append(dc)
+        result.append("")
+        return result
+
+
+def split_europe_auto(ports, dn, dc):
+    baltic = []
+    eastern_med = []
+    west_med = []
+    baltic.append("SOU")
+    baltic.append("HAU")
+    baltic.append("FLM")
+    baltic.append("AES")
+    baltic.append("BGO")
+    baltic.append("KWL")
+    baltic.append("GNR")
+    baltic.append("SVG")
+    baltic.append("TOS")
+    baltic.append("LKN")
+    baltic.append("HVG")
+    conn = sqlite3.connect('/home/fixxxer/PycharmProjects/PortsExplorer/ports.db')
+    c = conn.cursor()
+    c.execute("SELECT * FROM portlist WHERE destination_name='Baltics'")
+    for row in c.fetchall():
+        baltic.append(row[0])
+    c.execute("SELECT * FROM portlist WHERE destination_name='EastMed'")
+    for row in c.fetchall():
+        eastern_med.append(row[0])
+    c.execute("SELECT * FROM portlist WHERE destination_name='WestMed'")
+    for row in c.fetchall():
+        west_med.append(row[0])
+    c.close()
+    conn.close()
+    for element in baltic:
+        for p in ports:
+            if p in element or element in p:
+                return ['Baltic', 'E']
+            elif ports[0] in element or element in ports[0]:
+                return ['Baltic', 'E']
+
+    for element in eastern_med:
+        for p in ports:
+            if p in element or element in p:
+                return ['Eastern Med', 'E']
+
+    for element in west_med:
+        for p in ports:
+            if p in element or element in p:
+                return ['Western Med', 'E']
+    return [dn, dc]
+
 def parse(pack):
     headers = {
         'Host': 'www.rssc.com',
@@ -204,7 +318,14 @@ def parse(pack):
                     ports.append(tds[2].text.split(',')[0].replace('Cruising the ', '').replace('Cruising ', '').strip())
                 except IndexError:
                     pass
-            print(ports)
+            if destination_name == 'Caribbean/Panama Canal':
+                destination = split_carib_auto(ports, destination_code, destination_name)
+                destination_name = destination[0]
+                destination_code = destination[1]
+            if 'WMED/EMED' in destination_name:
+                dest = split_europe_auto(ports, destination_name, destination_code)
+                destination_code = dest[1]
+                destination_name = dest[0]
             # getting prices here
             table = soup.find('table', {'id': 'right'})
             row_list = []
