@@ -10,16 +10,29 @@ from multiprocessing.dummy import Pool as ThreadPool
 
 session = requests.session()
 
-# proxies = {'https': 'https://165.138.65.233:3128'}
-# proxies = {'https': 'https://192.241.145.201:8080'}
-# proxies = {'https': 'https://104.198.223.14:80'}
-# proxies = {'https': 'https://35.185.23.159:80'}
-proxies = {'https': 'https://70.35.197.74:80'}
+url = 'https://www.us-proxy.org'
+proxies = {}
+counter = 1
+soup = BeautifulSoup(session.get(url).text, "lxml")
+table = soup.find('table', {'id': 'proxylisttable'})
+rows = table.find_all('tr')
+rows = rows[1:]
+
+for r in rows:
+    tds = r.find_all('td')
+    if len(tds) != 0:
+        if tds[6].text == 'yes':
+            item = {
+                str(counter): "https://" + str(tds[0].text) + ":" + str(tds[1].text)
+            }
+            proxies.update(item)
+            counter += 1
 pool = ThreadPool(4)
 destination_list = ['AFRIND', 'ALSKA', 'ASIAS', 'CANNE', 'CARMX', 'GRNDX', 'EURMD', 'RUSBA', 'LATAM', 'GRNDV']
 to_walk = []
 result_list = []
 total_results = 0
+proxies = {'https': proxies['1']}
 
 
 def convert_date(unformated):
@@ -247,6 +260,7 @@ def split_europe_auto(ports, dn, dc):
                 return ['Western Med', 'E']
     return [dn, dc]
 
+
 def parse(pack):
     headers = {
         'Host': 'www.rssc.com',
@@ -315,7 +329,8 @@ def parse(pack):
             for row in rows:
                 tds = row.find_all('td')
                 try:
-                    ports.append(tds[2].text.split(',')[0].replace('Cruising the ', '').replace('Cruising ', '').strip())
+                    ports.append(
+                        tds[2].text.split(',')[0].replace('Cruising the ', '').replace('Cruising ', '').strip())
                 except IndexError:
                     pass
             if destination_name == 'Caribbean/Panama Canal':
@@ -346,7 +361,8 @@ def parse(pack):
                     ocview.append(prices[index][1])
                 elif prices[index][0] == 'Deluxe Veranda' or prices[index][0] == 'Veranda':
                     ver.append(prices[index][1])
-                elif prices[index][0] == 'Superior' or prices[index][0] == 'Concierge' or prices[index][0] == 'Penthouse':
+                elif prices[index][0] == 'Superior' or prices[index][0] == 'Concierge' or prices[index][
+                    0] == 'Penthouse':
                     sui.append(prices[index][1])
             if len(sui) > 0:
                 suite_bucket_price = sui[0].replace('$', '').replace(',', '')
