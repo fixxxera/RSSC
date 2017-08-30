@@ -1,108 +1,51 @@
 import datetime
-import math
-import os
-
-import requests
+import json
 import sqlite3
+
+import os
+import requests
 import xlsxwriter
 from bs4 import BeautifulSoup
-from multiprocessing.dummy import Pool as ThreadPool
 
 session = requests.session()
-
-url = 'https://www.us-proxy.org'
-proxies = {}
-counter = 1
-soup = BeautifulSoup(session.get(url).text, "lxml")
-table = soup.find('table', {'id': 'proxylisttable'})
-rows = table.find_all('tr')
-rows = rows[1:]
-
-for r in rows:
-    tds = r.find_all('td')
-    if len(tds) != 0:
-        if tds[6].text == 'yes':
-            item = {
-                str(counter): "https://" + str(tds[0].text) + ":" + str(tds[1].text)
-            }
-            proxies.update(item)
-            counter += 1
-pool = ThreadPool(4)
-destination_list = ['AFRIND', 'ALSKA', 'ASIAS', 'CANNE', 'CARMX', 'GRNDX', 'EURMD', 'RUSBA', 'LATAM', 'GRNDV']
-to_walk = []
+proxies = {'https': 'https://70.32.89.160:3128'}
+proxies = {'https': 'https://104.236.13.100:8888'}
+page = session.get('https://www.rssc.com/cruises', proxies=proxies)
+soup = BeautifulSoup(page.text, 'lxml')
+voyages = []
 result_list = []
-total_results = 0
-proxies = {'https': proxies['1']}
+from multiprocessing.dummy import Pool as ThreadPool
+
+pool = ThreadPool(4)
 
 
-def convert_date(unformated):
-    splitter = unformated.split()
-    day = splitter[1]
-    month = splitter[0]
-    year = splitter[2]
-    if month == 'January':
+def convert_date(day, month, year):
+    if month == 'Jan':
         month = '1'
-    elif month == 'February':
+    elif month == 'Feb':
         month = '2'
-    elif month == 'March':
+    elif month == 'Mar':
         month = '3'
-    elif month == 'April':
+    elif month == 'Apr':
         month = '4'
     elif month == 'May':
         month = '5'
-    elif month == 'June':
+    elif month == 'Jun':
         month = '6'
-    elif month == 'July':
+    elif month == 'Jul':
         month = '7'
-    elif month == 'August':
+    elif month == 'Aug':
         month = '8'
-    elif month == 'September':
+    elif month == 'Sep':
         month = '9'
-    elif month == 'October':
+    elif month == 'Oct':
         month = '10'
-    elif month == 'November':
+    elif month == 'Nov':
         month = '11'
-    elif month == 'December':
+    elif month == 'Dec':
         month = '12'
     final_date = '%s/%s/%s' % (month, day, year)
     return final_date
-
-
-def get_total_results(de):
-    url = "https://www.rssc.com/cruises/default.aspx?m=&r=" + de + "&dy=&sh=&p=&sp="
-    headers = {
-        'Host': 'www.rssc.com',
-        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:53.0) Gecko/20100101 Firefox/53.0',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Referer': 'https://www.rssc.com/',
-        'Cookie': 'AKCountry=US; utag_main=v_id:015a3cd6f81f0015e7883104dd6f01044001500900bd0$_sn:1$_ss:0$_pn:4%3Bexp'
-                  '-session$_st:1487081459123$ses_id:1487079405599%3Bexp-session; s_cc=true; '
-                  's_sq=rsscprod%3D%2526c.%2526a.%2526activitymap.%2526page%253DBooking%252520funnel%25253A'
-                  '%252520Step%2525200%25253A%252520Search%252520results%2526link%253D1%2526region%253Dpagination'
-                  '%2526pageIDType%253D1%2526.activitymap%2526.a%2526.c%2526pid%253DBooking%252520funnel%25253A'
-                  '%252520Step%2525200%25253A%252520Search%252520results%2526pidt%253D1%2526oid%253Djavascript%25253A'
-                  '%25252520CruiseResultsItemClick%252528%252527page%252527%25252C%25252520%2525271%252527%25252C'
-                  '%25252520%252527%252527%25252C%25252520%252527%252527%252529%2526ot%253DA%26bgtrsscprod%3D%2526pid'
-                  '%253Drssc%25257Ccruises%25257Cna%25257Cna%25257Cna%25257Cna%25257Cna%2526pidt%253D1%2526oid'
-                  '%253Djavascript%25253A%25252520CruiseResultsItemClick%252528%252527page%252527%25252C%25252520'
-                  '%2525271%252527%25252C%25252520%252527%252527%25252C%25252520%252527%252527%252529%2526ot%253DA; '
-                  's_getNewRepeat=1487079659816-New; s_fid=7903A570C377CC63-29C6DF9A1D314E4B; '
-                  '_ga=GA1.2.1688205592.1487079406; _gat_tealium_0=1; s_vi=[CS]v1|2C5183F705014C8E-6000014860004F6C['
-                  'CE]; ipe_s=a2d3df6d-f916-9020-bc5c-014f15010f14; ipe.370.pageViewedCount=2; '
-                  'UserSettings=Country=US; CruiseSearch.GalleryView=True; IPE125021=IPE125021',
-        'Proxy-Authorization': 'Basic bWFydGluLmJhbHR1aGluQGdtYWlsLmNvbTphLzZFZzN2T3J3blpiUWxNcWYrdVF5VzNyOU5OU0tTNw==',
-        'X-Time': '1487079696226',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1',
-        'Cache-Control': 'max-age=0'
-    }
-    page = session.get(url=url, headers=headers, proxies=proxies).text
-    soup = BeautifulSoup(page, "lxml")
-    div = soup.find('div', {'id': 'matchInfo'})
-    number = int(div.find('h3').text.split()[0])
-    return number
 
 
 def calculate_days(date, duration):
@@ -261,142 +204,88 @@ def split_europe_auto(ports, dn, dc):
     return [dn, dc]
 
 
-def parse(pack):
-    headers = {
-        'Host': 'www.rssc.com',
-        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:53.0) Gecko/20100101 Firefox/53.0',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Referer': 'https://www.rssc.com/',
-        'Cookie': 'AKCountry=US; utag_main=v_id:015a3cd6f81f0015e7883104dd6f01044001500900bd0$_sn:1$_ss:0$_pn:4%3Bexp'
-                  '-session$_st:1487081459123$ses_id:1487079405599%3Bexp-session; s_cc=true; '
-                  's_sq=rsscprod%3D%2526c.%2526a.%2526activitymap.%2526page%253DBooking%252520funnel%25253A'
-                  '%252520Step%2525200%25253A%252520Search%252520results%2526link%253D1%2526region%253Dpagination'
-                  '%2526pageIDType%253D1%2526.activitymap%2526.a%2526.c%2526pid%253DBooking%252520funnel%25253A'
-                  '%252520Step%2525200%25253A%252520Search%252520results%2526pidt%253D1%2526oid%253Djavascript%25253A'
-                  '%25252520CruiseResultsItemClick%252528%252527page%252527%25252C%25252520%2525271%252527%25252C'
-                  '%25252520%252527%252527%25252C%25252520%252527%252527%252529%2526ot%253DA%26bgtrsscprod%3D%2526pid'
-                  '%253Drssc%25257Ccruises%25257Cna%25257Cna%25257Cna%25257Cna%25257Cna%2526pidt%253D1%2526oid'
-                  '%253Djavascript%25253A%25252520CruiseResultsItemClick%252528%252527page%252527%25252C%25252520'
-                  '%2525271%252527%25252C%25252520%252527%252527%25252C%25252520%252527%252527%252529%2526ot%253DA; '
-                  's_getNewRepeat=1487079659816-New; s_fid=7903A570C377CC63-29C6DF9A1D314E4B; '
-                  '_ga=GA1.2.1688205592.1487079406; _gat_tealium_0=1; s_vi=[CS]v1|2C5183F705014C8E-6000014860004F6C['
-                  'CE]; ipe_s=a2d3df6d-f916-9020-bc5c-014f15010f14; ipe.370.pageViewedCount=2; '
-                  'UserSettings=Country=US; CruiseSearch.GalleryView=True; IPE125021=IPE125021',
-        'Proxy-Authorization': 'Basic bWFydGluLmJhbHR1aGluQGdtYWlsLmNvbTphLzZFZzN2T3J3blpiUWxNcWYrdVF5VzNyOU5OU0tTNw==',
-        'X-Time': '1487079696226',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1',
-        'Cache-Control': 'max-age=0'
-    }
-    count = pack[1]
-    des = pack[0]
-    while count > 0:
-        url = 'https://www.rssc.com/WebServices/CruiseFinder/CruiseFinder.asmx/GetCruiseFinderResults'
-        json = {'action': 'page', 'clickedItem': str(count), 'currentSelections': 'R' + des + '',
-                'currentPage': str(count),
-                'currentView': 'gallery', 'compareCruises': '', 'preSetVoyages': '', 'showTitles': 'True',
-                'container': '', 'showRemove': 'False'}
-        page = session.post(url=url, headers=headers, json=json, proxies=proxies).json()['d']
-        count -= 1
-        soup = BeautifulSoup(page, 'lxml')
-        results = soup.find_all('div', {'class': 'result'})
-        for res in results:
-            brochure_name = res.find('div', {'class': 'resultHeader'}).find('a').text
-            detail_box = res.find('div', {'class': 'detail'})
-            vessel_name = detail_box.find('h4').text
-            number_of_nights = detail_box.find('h5').text.split()[0]
-            spans = detail_box.find_all('span')
-            sail_date = convert_date(spans[0].text.replace(',', ''))
-            return_date = calculate_days(sail_date, number_of_nights)
-            interior_bucket_price = ''
-            destination = get_from_code(des)
-            destination_name = destination[0]
-            destination_code = destination[1]
-            cruise_line_name = 'RSSC'
-            itinerary_id = ''
-            cruise_id = '13'
-            vessel_id = get_from_vessel_name(vessel_name)
-            price_block = res.find('div', {'class': 'viewDetail'}).find('a')['href']
-            url = 'https://www.rssc.com' + price_block
-            page = session.get(url=url, headers=headers, proxies=proxies)
-            soup = BeautifulSoup(page.text, 'lxml')
-            # getting ports here
-            ports_table = soup.find('div', {'id': 'itineraryInfo'})
-            rows = ports_table.find_all('tr')
-            ports = []
-            for row in rows:
-                tds = row.find_all('td')
-                try:
-                    ports.append(
-                        tds[2].text.split(',')[0].replace('Cruising the ', '').replace('Cruising ', '').strip())
-                except IndexError:
-                    pass
-            if destination_name == 'Caribbean/Panama Canal':
-                destination = split_carib_auto(ports, destination_code, destination_name)
-                destination_name = destination[0]
-                destination_code = destination[1]
-            if 'WMED/EMED' in destination_name:
-                dest = split_europe_auto(ports, destination_name, destination_code)
-                destination_code = dest[1]
-                destination_name = dest[0]
-            # getting prices here
-            table = soup.find('table', {'id': 'right'})
-            row_list = []
-            prices = []
-            siblings = table.find_all('tr')
-            for s in siblings:
-                row_list.append(s)
-            for index in range(1, len(row_list), 2):
-                twoforone = row_list[index].find('td', {'class': 'twoforone'}).text
-                room = row_list[index].find('a').text.split(' Suite ')[0]
-                prices.append([room, twoforone])
-            prices = list(reversed(prices))
-            ocview = []
-            ver = []
-            sui = []
-            for index in range(0, len(prices)):
-                if prices[index][0] == 'Deluxe Window':
-                    ocview.append(prices[index][1])
-                elif prices[index][0] == 'Deluxe Veranda' or prices[index][0] == 'Veranda':
-                    ver.append(prices[index][1])
-                elif prices[index][0] == 'Superior' or prices[index][0] == 'Concierge' or prices[index][
-                    0] == 'Penthouse':
-                    sui.append(prices[index][1])
-            if len(sui) > 0:
-                suite_bucket_price = sui[0].replace('$', '').replace(',', '')
-            else:
-                suite_bucket_price = 'N/A'
-            if len(ver) > 0:
-                balcony_bucket_price = ver[0].replace('$', '').replace(',', '')
-            else:
-                balcony_bucket_price = 'N/A'
-            if len(ocview) > 0:
-                oceanview_bucket_price = ocview[0].replace('$', '').replace(',', '')
-            else:
-                oceanview_bucket_price = 'N/A'
-            temp = [destination_code, destination_name, vessel_id, vessel_name, cruise_id, cruise_line_name,
-                    itinerary_id,
-                    brochure_name, number_of_nights, sail_date, return_date,
-                    interior_bucket_price, oceanview_bucket_price, balcony_bucket_price, suite_bucket_price, ports]
-            tmp2 = [temp]
-            print(temp)
-            result_list.append(tmp2)
-    pass
+scripts = soup.find_all('script')
+for script in scripts:
+    if 'cruises = ' in script.text:
+        sr = script.text.split(' = ')[1].strip()[:-1]
+        jsonfile = (json.loads(sr))
+        for j in jsonfile:
+            voyages.append(j)
 
 
-for d in destination_list:
-    total = get_total_results(d)
-    total_results += total
-    if total == 0:
-        continue
-    elif total <= 12:
-        to_walk.append([d, 1])
+def parse(v):
+    ports = []
+    vessel_name = v['ship']['title']
+    ship_id = get_from_vessel_name(vessel_name)
+    destination = get_from_code(v['region']['id'])
+    destination_code = destination[1]
+    destination_name = destination[0]
+    cruise_id = '13'
+    itinerary_id = ''
+    cruise_line_name = 'RSSC'
+    vessel_id = v['voyageId']
+    for port in v['ports']:
+        ports.append(port['title'])
+    number_of_nights = v['duration']
+    trip_page = 'https://www.rssc.com/cruises/' + vessel_id + '/summary'
+    print("Downloading", trip_page)
+    response = requests.get(trip_page, proxies=proxies)
+    detail_soup = BeautifulSoup(response.text, 'lxml')
+    brochure_name = detail_soup.find('span', {'class': 'headline-first'}).text.strip()
+    h1 = detail_soup.find('h1', {'class': 'headline a1m'})
+    date = h1.text.split(' | ')[2].replace('Departs ', '').replace(',', '').split()
+    sail_date = convert_date(date[1], date[0], date[2])
+    return_date = calculate_days(sail_date, number_of_nights)
+    prices = []
+    if destination_name == 'Caribbean/Panama Canal':
+        destination = split_carib_auto(ports, destination_code, destination_name)
+        destination_name = destination[0]
+        destination_code = destination[1]
+    if 'WMED/EMED' in destination_name:
+        dest = split_europe_auto(ports, destination_name, destination_code)
+        destination_code = dest[1]
+        destination_name = dest[0]
+    price_table = detail_soup.find('div', {'class', 'fares-table'})
+    trs = price_table.find_all('tr', {'class': 'js-toggle-dropdown'})
+    for tr in trs:
+        room_type = str(tr.find_all('td')[1].find('a').text).strip().split(' Suite ')[0].strip()
+        price = str(tr.find_all('td')[3].find_all('span', {'class': 'data-info'})[1].text).replace('$', '').replace(',',
+                                                                                                                    '')
+        prices.append([room_type, price])
+    prices = list(reversed(prices))
+    interior_bucket_price = ''
+    ocview = []
+    ver = []
+    sui = []
+    for index in range(0, len(prices)):
+        if prices[index][0] == 'Deluxe Window':
+            ocview.append(prices[index][1])
+        elif prices[index][0] == 'Deluxe Veranda' or prices[index][0] == 'Veranda':
+            ver.append(prices[index][1])
+        elif prices[index][0] == 'Superior' or prices[index][0] == 'Concierge' or prices[index][0] == 'Penthouse':
+            sui.append(prices[index][1])
+    if len(sui) > 0:
+        suite_bucket_price = sui[0].replace('$', '').replace(',', '')
     else:
-        pages = math.ceil(total / 12)
-        to_walk.append([d, pages])
-pool.map(parse, to_walk)
+        suite_bucket_price = 'N/A'
+    if len(ver) > 0:
+        balcony_bucket_price = ver[0].replace('$', '').replace(',', '')
+    else:
+        balcony_bucket_price = 'N/A'
+    if len(ocview) > 0:
+        oceanview_bucket_price = ocview[0].replace('$', '').replace(',', '')
+    else:
+        oceanview_bucket_price = 'N/A'
+    temp = [destination_code, destination_name, ship_id, vessel_name, cruise_id, cruise_line_name,
+            itinerary_id,
+            brochure_name, number_of_nights, sail_date, return_date,
+            interior_bucket_price, oceanview_bucket_price, balcony_bucket_price, suite_bucket_price, ports]
+    tmp2 = [temp]
+    print(temp)
+    result_list.append(tmp2)
+
+
+pool.map(parse, voyages)
 pool.close()
 pool.join()
 
