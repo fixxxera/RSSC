@@ -120,7 +120,7 @@ def split_carib_auto(ports, dc, dn):
     wc = []
     ec = []
     bm = []
-    conn = sqlite3.connect('/home/fixxxer/PycharmProjects/PortsExplorer/ports.db')
+    conn = sqlite3.connect(r'C:\Users\Arch\PycharmProjects\PortsExplorer\ports.db')
     c = conn.cursor()
     c.execute("SELECT * FROM portlist WHERE destination_name='Cuba'")
     for row in c.fetchall():
@@ -197,7 +197,7 @@ def split_europe_auto(ports, dn, dc):
     baltic.append("TOS")
     baltic.append("LKN")
     baltic.append("HVG")
-    conn = sqlite3.connect('/home/fixxxer/PycharmProjects/PortsExplorer/ports.db')
+    conn = sqlite3.connect(r'C:\Users\Arch\PycharmProjects\PortsExplorer\ports.db')
     c = conn.cursor()
     c.execute("SELECT * FROM portlist WHERE destination_name='Baltics'")
     for row in c.fetchall():
@@ -317,7 +317,6 @@ pool.join()
 
 def write_file_to_excell(data_array):
     userhome = os.path.expanduser('~')
-    # print(userhome)
     now = datetime.datetime.now()
     path_to_file = userhome + '/Dropbox/XLSX/For Assia to test/' + str(now.year) + '-' + str(now.month) + '-' + str(
         now.day) + '/' + str(now.year) + '-' + str(now.month) + '-' + str(now.day) + '- RSSC.xlsx'
@@ -416,8 +415,6 @@ def write_file_to_excell(data_array):
                         column_count += 1
                     elif column_count == 11:
                         tmp = str(r)
-                        cell = ""
-                        number = 0
                         if "." in tmp:
                             number = round(float(tmp))
                         else:
@@ -430,8 +427,6 @@ def write_file_to_excell(data_array):
                         column_count += 1
                     elif column_count == 12:
                         tmp = str(r)
-                        cell = ""
-                        number = 0
                         if "." in tmp:
                             number = round(float(tmp))
                         else:
@@ -444,8 +439,6 @@ def write_file_to_excell(data_array):
                         column_count += 1
                     elif column_count == 13:
                         tmp = str(r)
-                        cell = ""
-                        number = 0
                         if "." in tmp:
                             number = round(float(tmp))
                         else:
@@ -458,8 +451,6 @@ def write_file_to_excell(data_array):
                         column_count += 1
                     elif column_count == 14:
                         tmp = str(r)
-                        cell = ""
-                        number = 0
                         if "." in tmp:
                             number = round(float(tmp))
                         else:
