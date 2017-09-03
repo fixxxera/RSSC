@@ -6,6 +6,7 @@ import os
 import requests
 import xlsxwriter
 from bs4 import BeautifulSoup
+from multiprocessing.dummy import Pool as ThreadPool
 
 session = requests.session()
 proxies = {'https': 'https://70.32.89.160:3128'}
@@ -14,7 +15,7 @@ page = session.get('https://www.rssc.com/cruises', proxies=proxies)
 soup = BeautifulSoup(page.text, 'lxml')
 voyages = []
 result_list = []
-from multiprocessing.dummy import Pool as ThreadPool
+
 
 pool = ThreadPool(4)
 
