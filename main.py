@@ -9,8 +9,32 @@ from bs4 import BeautifulSoup
 from multiprocessing.dummy import Pool as ThreadPool
 
 session = requests.session()
-proxies = {'https': 'https://70.32.89.160:3128'}
-proxies = {'https': 'https://104.236.13.100:8888'}
+def get_proxy():
+    print("Looking for a working proxy server")
+    soup = BeautifulSoup(requests.get('https://www.us-proxy.org').text, 'lxml')
+    table = soup.find('table', {'id': 'proxylisttable'})
+    tbody = table.find('tbody')
+    proxies = []
+    for tr in tbody:
+        columns = tr.find_all('td')
+        if columns[2].text in 'US' and columns[4].text in 'anonymous' and columns[6].text in 'yes':
+            proxies.append("https://" + columns[0].text + ":" + columns[1].text)
+    for p in proxies:
+        try:
+            proxy_line = {'https': p}
+            resp = requests.get('https://www.rssc.com/cruises', proxies=proxy_line, timeout=10)
+            if resp.ok:
+                print("Found one!")
+                return proxy_line
+            else:
+                print(p, "Not working")
+        except requests.exceptions.ProxyError:
+            print(p, "Not working")
+        except requests.exceptions.ConnectTimeout:
+            print(p, "Not working")
+        except requests.exceptions.ReadTimeout:
+            print(p, "Not working")
+proxies = get_proxy()
 page = session.get('https://www.rssc.com/cruises', proxies=proxies)
 soup = BeautifulSoup(page.text, 'lxml')
 voyages = []
@@ -52,7 +76,7 @@ def convert_date(day, month, year):
 def calculate_days(date, duration):
     dateobj = datetime.datetime.strptime(date, "%m/%d/%Y")
     calculated = dateobj + datetime.timedelta(days=int(duration))
-    calculated = calculated.strftime("%-m/%-d/%Y")
+    calculated = calculated.strftime("%m/%d/%Y")
     return calculated
 
 
