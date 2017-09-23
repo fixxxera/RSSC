@@ -120,7 +120,7 @@ def split_carib_auto(ports, dc, dn):
     wc = []
     ec = []
     bm = []
-    conn = sqlite3.connect(r'C:\Users\Arch\PycharmProjects\PortsExplorer\ports.db')
+    conn = sqlite3.connect(r'/home/fixxxer/PycharmProjects/PortsExplorer/ports.db')
     c = conn.cursor()
     c.execute("SELECT * FROM portlist WHERE destination_name='Cuba'")
     for row in c.fetchall():
@@ -197,7 +197,7 @@ def split_europe_auto(ports, dn, dc):
     baltic.append("TOS")
     baltic.append("LKN")
     baltic.append("HVG")
-    conn = sqlite3.connect(r'C:\Users\Arch\PycharmProjects\PortsExplorer\ports.db')
+    conn = sqlite3.connect(r'/home/fixxxer/PycharmProjects/PortsExplorer/ports.db')
     c = conn.cursor()
     c.execute("SELECT * FROM portlist WHERE destination_name='Baltics'")
     for row in c.fetchall():
